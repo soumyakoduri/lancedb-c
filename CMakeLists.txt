@@ -52,7 +52,7 @@ endif()
 
 # rust-lib target
 if(BUILD_EXAMPLES)
-  set(RUST_FEATURES "--features" "s3-helper")
+  set(RUST_FEATURES "--features" "s3-helper,rgw")
 else()
   set(RUST_FEATURES "")
 endif()
@@ -139,7 +139,28 @@ if(BUILD_EXAMPLES)
     BUILD_RPATH ${RUST_TARGET_DIR}
   )
 
-  add_custom_target(examples DEPENDS simple full s3 s3_wrapper)
+  # RGW example - demonstrates RGW backend with WrappingObjectStore
+  add_executable(rgw examples/rgw.cpp)
+
+  # Add Ceph library path
+  set(CEPH_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ceph/build/lib")
+
+  target_link_libraries(rgw
+    lancedb
+    Threads::Threads
+    ${ARROW_LIBRARIES}
+    ${CEPH_LIB_DIR}/libceph-common.so.2
+  )
+  target_include_directories(rgw
+    PRIVATE ${ARROW_INCLUDE_DIRS}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_compile_options(rgw PRIVATE ${ARROW_CFLAGS_OTHER})
+  set_target_properties(rgw PROPERTIES
+    BUILD_RPATH "${RUST_TARGET_DIR}:${CEPH_LIB_DIR}"
+  )
+
+  add_custom_target(examples DEPENDS simple full s3 s3_wrapper rgw)
 endif()
 
 if(BUILD_DOCS)

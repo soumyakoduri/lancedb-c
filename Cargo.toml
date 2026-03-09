@@ -35,3 +35,7 @@ lancedb-s3-object-store = { path = "examples/s3_object_store", optional = true }
 
 [features]
 s3-helper = ["lancedb-s3-object-store"]
+rgw = ["object_store/rgw"]
+
+[patch.crates-io]
+object_store = { path = "../arrow-rs-object-store" }

@@ -1411,6 +1411,41 @@ void lancedb_free_arrow_arrays(
  */
 void lancedb_free_string(char* str);
 
+/**
+ * Create an RGW object store wrapper for use with LanceDB
+ *
+ * This creates an RGW-backed object store that can be used via the
+ * WrappingObjectStore mechanism in write_params/read_params.
+ *
+ * IMPORTANT: This does NOT create a connection. The wrapper should be
+ * passed via ObjectStoreParams in write_params when creating/accessing tables.
+ *
+ * SAFETY:
+ * - driver must be a valid pointer to an initialized RGW Driver
+ * - dpp can be null or must be a valid pointer to a DoutPrefixProvider
+ * - bucket must be a valid null-terminated C string
+ * - Both driver and dpp pointers must remain valid for the lifetime of the wrapper
+ * - The driver must be thread-safe
+ *
+ * @param driver - pointer to initialized RGW Driver (rgw::sal::Driver*)
+ * @param dpp - pointer to DoutPrefixProvider (can be NULL)
+ * @param bucket - name of the RGW bucket
+ * @return Non-null pointer to LanceDBObjectStore on success, NULL on failure
+ *
+ * Example:
+ *   // Create RGW wrapper with driver/dpp
+ *   LanceDBObjectStore* rgw_wrapper = lancedb_create_rgw_wrapper(
+ *       driver_ptr, dpp_ptr, "my-bucket");
+ *   if (rgw_wrapper != NULL) {
+ *       // Use in WrappingObjectStore callback for write_params
+ *   }
+ */
+LanceDBObjectStore* lancedb_create_rgw_wrapper(
+    void* driver,
+    const void* dpp,
+    const char* bucket
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,6 +17,9 @@ pub mod query;
 pub mod table;
 pub mod types;
 
+#[cfg(feature = "rgw")]
+pub mod rgw_provider;
+
 // Re-export all public FFI functions
 pub use connection::*;
 pub use error::*;
@@ -24,3 +27,6 @@ pub use index::*;
 pub use query::*;
 pub use table::*;
 pub use types::*;
+
+#[cfg(feature = "rgw")]
+pub use rgw_provider::*;
