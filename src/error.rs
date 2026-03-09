@@ -59,6 +59,7 @@ pub(crate) fn error_to_error_code(error: &lancedb::error::Error) -> LanceDBError
         lancedb::error::Error::Arrow { .. } => LanceDBError::Arrow,
         lancedb::error::Error::NotSupported { .. } => LanceDBError::NotSupported,
         lancedb::error::Error::Other { .. } => LanceDBError::Other,
+        lancedb::error::Error::External { .. } => LanceDBError::Other,
     }
 }
 

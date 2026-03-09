@@ -21,13 +21,15 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 tokio = { version = "1.23", features = ["rt-multi-thread"] }
 libc = "0.2"
-lancedb = { version = "0.22.3", features = ["remote"] }
-lance = { version = "0.39", default-features = false }
-lance-file = { version = "0.39", default-features = false }
-arrow = { version = "56.2", optional = false }
-arrow-array = "56.2"
-arrow-data = "56.2"
-arrow-schema = "56.2"
+lancedb = { path = "../lancedb/rust/lancedb", features = ["remote"] }
+lance = { path = "../lance/rust/lance", default-features = false }
+lance-io = { path = "../lance/rust/lance-io", default-features = false, features = ["rgw"] }
+lance-file = { path = "../lance/rust/lance-file", default-features = false }
+lance-namespace = { path = "../lance/rust/lance-namespace" }
+arrow = { version = "57.2", optional = false, features = ["ffi"] }
+arrow-array = "57.2"
+arrow-data = "57.2"
+arrow-schema = "57.2"
 object_store = "0.12"
 futures = "0"
 chrono = "0"
@@ -35,3 +37,7 @@ lancedb-s3-object-store = { path = "examples/s3_object_store", optional = true }
 
 [features]
 s3-helper = ["lancedb-s3-object-store"]
+rgw = ["object_store/rgw"]
+
+[patch.crates-io]
+object_store = { path = "../arrow-rs-object-store" }

@@ -51,6 +51,7 @@ if (BUILD_EXAMPLES OR BUILD_TESTS)
 endif()
 
 # rust-lib target
+# Note: lancedb-c is now generic - RGW support is in lance-io
 if(BUILD_EXAMPLES)
   set(RUST_FEATURES "--features" "s3-helper")
 else()
@@ -139,7 +140,59 @@ if(BUILD_EXAMPLES)
     BUILD_RPATH ${RUST_TARGET_DIR}
   )
 
-  add_custom_target(examples DEPENDS simple full s3 s3_wrapper)
+  # RGW example - demonstrates RGW backend with WrappingObjectStore (old approach)
+  add_executable(rgw examples/rgw.cpp)
+
+  # Add Ceph library path
+  set(CEPH_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ceph/build/lib")
+
+  target_link_libraries(rgw
+    lancedb
+    Threads::Threads
+    ${ARROW_LIBRARIES}
+    ${CEPH_LIB_DIR}/libceph-common.so.2
+  )
+  target_include_directories(rgw
+    PRIVATE ${ARROW_INCLUDE_DIRS}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_compile_options(rgw PRIVATE ${ARROW_CFLAGS_OTHER})
+  set_target_properties(rgw PROPERTIES
+    BUILD_RPATH "${RUST_TARGET_DIR}:${CEPH_LIB_DIR}"
+  )
+
+  # RGW new example - demonstrates RGW backend using lance-io FFI directly
+  # Build lance-io with RGW support
+  set(LANCE_IO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../lance/rust/lance-io")
+  set(LANCE_IO_LIB_PATH "${RUST_TARGET_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}lance_io${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+  add_custom_target(lance-io-rgw
+    COMMAND cargo build ${RUST_BUILD_TYPE} --features rgw --target-dir "${CMAKE_BINARY_DIR}/target"
+    WORKING_DIRECTORY ${LANCE_IO_DIR}
+    COMMENT "Building lance-io with RGW support..."
+    BYPRODUCTS ${LANCE_IO_LIB_PATH}
+  )
+
+  add_executable(rgw_new examples/rgw_new.cpp)
+  add_dependencies(rgw_new lance-io-rgw)
+
+  target_link_libraries(rgw_new
+    lancedb
+    ${LANCE_IO_LIB_PATH}
+    Threads::Threads
+    ${ARROW_LIBRARIES}
+    ${CEPH_LIB_DIR}/libceph-common.so.2
+  )
+  target_include_directories(rgw_new
+    PRIVATE ${ARROW_INCLUDE_DIRS}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_compile_options(rgw_new PRIVATE ${ARROW_CFLAGS_OTHER})
+  set_target_properties(rgw_new PROPERTIES
+    BUILD_RPATH "${RUST_TARGET_DIR}:${CEPH_LIB_DIR}"
+  )
+
+  add_custom_target(examples DEPENDS simple full s3 s3_wrapper rgw rgw_new)
 endif()
 
 if(BUILD_DOCS)

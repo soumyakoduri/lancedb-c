@@ -3,8 +3,6 @@
 
 //! Common types shared across LanceDB C bindings modules
 
-use std::collections::HashMap;
-use std::ffi::CString;
 use std::fmt;
 use std::os::raw::c_char;
 use std::sync::Arc;
@@ -200,41 +198,19 @@ impl CWrappingObjectStore {
 impl WrappingObjectStore for CWrappingObjectStore {
     fn wrap(
         &self,
+        _store_prefix: &str,
         original: Arc<dyn OSObjectStore>,
-        storage_options: Option<&HashMap<String, String>>,
     ) -> Arc<dyn OSObjectStore> {
         // Wrap original in a temporary struct (non-owning, valid only during callback)
         let temp = LanceDBObjectStore {
             inner: original.clone(),
         };
 
-        // Convert storage_options to C key/value arrays
-        let (c_keys, c_values, count) = if let Some(opts) = storage_options {
-            let keys: Vec<CString> = opts
-                .keys()
-                .map(|k| CString::new(k.as_str()).unwrap_or_default())
-                .collect();
-            let values: Vec<CString> = opts
-                .values()
-                .map(|v| CString::new(v.as_str()).unwrap_or_default())
-                .collect();
-            let key_ptrs: Vec<*const c_char> = keys.iter().map(|k| k.as_ptr()).collect();
-            let value_ptrs: Vec<*const c_char> = values.iter().map(|v| v.as_ptr()).collect();
-            let count = keys.len();
-            // Keep keys/values alive until after the callback
-            (Some((keys, key_ptrs)), Some((values, value_ptrs)), count)
-        } else {
-            (None, None, 0)
-        };
-
-        let key_ptrs_ptr = c_keys
-            .as_ref()
-            .map(|(_, ptrs)| ptrs.as_ptr())
-            .unwrap_or(std::ptr::null());
-        let value_ptrs_ptr = c_values
-            .as_ref()
-            .map(|(_, ptrs)| ptrs.as_ptr())
-            .unwrap_or(std::ptr::null());
+        // storage_options parameter removed from new API
+        // Pass empty arrays to the C callback
+        let key_ptrs_ptr = std::ptr::null();
+        let value_ptrs_ptr = std::ptr::null();
+        let count = 0;
 
         let result = unsafe {
             (self.wrap_fn)(
