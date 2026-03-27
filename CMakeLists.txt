@@ -422,6 +422,40 @@ if(BUILD_TESTS)
   )
   list(APPEND TEST_TARGETS lancedb_vector_query_tests)
 
+  # Add test executable for boost fiber tests (mimics Ceph RGW environment)
+  # This requires Boost.Asio, Boost.Context, and Boost.Coroutine
+  find_package(Boost COMPONENTS context coroutine)
+  if(Boost_FOUND AND Boost_COROUTINE_FOUND)
+    message(STATUS "Boost found - building fiber tests")
+    add_executable(lancedb_boost_fiber_tests
+      tests/test_main.cpp
+      tests/test_common.cpp
+      tests/test_boost_fiber.cpp
+    )
+    target_link_libraries(lancedb_boost_fiber_tests
+      PRIVATE
+      lancedb
+      Catch2::Catch2
+      Threads::Threads
+      ${ARROW_LIBRARIES}
+      Boost::context
+      Boost::coroutine
+    )
+    target_include_directories(lancedb_boost_fiber_tests
+      PRIVATE ${ARROW_INCLUDE_DIRS}
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests
+      PRIVATE ${Boost_INCLUDE_DIRS}
+    )
+    target_compile_options(lancedb_boost_fiber_tests PRIVATE ${ARROW_CFLAGS_OTHER})
+    set_target_properties(lancedb_boost_fiber_tests PROPERTIES
+      BUILD_RPATH ${RUST_TARGET_DIR}
+    )
+    list(APPEND TEST_TARGETS lancedb_boost_fiber_tests)
+  else()
+    message(STATUS "Boost.Context/Coroutine not found - skipping fiber tests")
+  endif()
+
   # Enable CTest
   enable_testing()
 
