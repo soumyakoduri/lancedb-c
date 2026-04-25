@@ -370,6 +370,62 @@ pub unsafe extern "C" fn lancedb_session_free(session: *mut LanceDBSession) {
     }
 }
 
+/// Set an external session pointer for the connection builder
+///
+/// This function is designed for use with external session providers like
+/// ceph-lancedb-rgw that create Arc<Session> directly. The session pointer
+/// is expected to be an Arc<Session> converted to a raw pointer.
+///
+/// # Safety
+/// - `builder` must be a valid pointer returned from `lancedb_connect`
+/// - `builder` will be consumed and must not be used after calling this function
+/// - `session_ptr` must be a valid pointer to Arc<Session> (can be NULL for no-op)
+/// - The session must outlive the connection
+///
+/// # Returns
+/// - A new pointer to LanceDBConnectBuilder on success
+/// - Null pointer on failure
+///
+/// # Example (from C++)
+/// ```cpp
+/// // Create session using ceph-lancedb-rgw
+/// void* session = ceph_lancedb_create_session(driver, dpp);
+///
+/// // Use with lancedb-c
+/// LanceDBConnectBuilder* builder = lancedb_connect("s3://mybucket/data");
+/// builder = lancedb_connect_builder_session_ptr(builder, session);
+/// LanceDBConnection* conn = lancedb_connect_builder_execute(builder);
+/// ```
+#[no_mangle]
+pub unsafe extern "C" fn lancedb_connect_builder_session_ptr(
+    builder: *mut LanceDBConnectBuilder,
+    session_ptr: *const std::os::raw::c_void,
+) -> *mut LanceDBConnectBuilder {
+    if builder.is_null() {
+        return ptr::null_mut();
+    }
+
+    let builder_box = Box::from_raw(builder);
+    let connect_builder = *builder_box.inner;
+
+    let updated_builder = if session_ptr.is_null() {
+        connect_builder
+    } else {
+        // Clone the Arc (incrementing refcount) without taking ownership
+        // The caller maintains ownership of their Arc
+        let session_arc = Arc::from_raw(session_ptr as *const lancedb::Session);
+        let session_clone = session_arc.clone();
+        std::mem::forget(session_arc); // Don't decrement the original refcount
+        connect_builder.session(session_clone)
+    };
+
+    let boxed_builder = Box::new(LanceDBConnectBuilder {
+        inner: Box::new(updated_builder),
+    });
+
+    Box::into_raw(boxed_builder)
+}
+
 /// Create a new table with Arrow schema and data
 ///
 /// # Safety

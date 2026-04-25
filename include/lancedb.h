@@ -334,6 +334,38 @@ LanceDBConnectBuilder* lancedb_connect_builder_storage_option(LanceDBConnectBuil
 LanceDBConnectBuilder* lancedb_connect_builder_session(LanceDBConnectBuilder* builder, const LanceDBSession* session);
 
 /**
+ * Set an external session pointer for the connection builder
+ *
+ * This function is designed for use with external session providers like
+ * ceph-lancedb-rgw that create Arc<Session> directly. The session pointer
+ * is expected to be an Arc<Session> converted to a raw pointer.
+ *
+ * @param builder - pointer to LanceDBConnectBuilder returned from lancedb_connect()
+ * @param session_ptr - pointer to Arc<Session> (void*), or NULL for no-op
+ * @return Non-null pointer to LanceDBConnectBuilder on success, NULL on failure
+ *
+ * The builder is consumed by this function and must not be used after calling.
+ * The session must outlive the connection created with this builder.
+ *
+ * Example usage with ceph-lancedb-rgw:
+ * @code
+ *   // Create session using ceph-lancedb-rgw
+ *   void* session = ceph_lancedb_create_session(driver, dpp);
+ *
+ *   // Use with lancedb-c
+ *   LanceDBConnectBuilder* builder = lancedb_connect("s3://mybucket/data");
+ *   builder = lancedb_connect_builder_session_ptr(builder, session);
+ *   LanceDBConnection* conn = lancedb_connect_builder_execute(builder);
+ *
+ *   // ... use connection ...
+ *
+ *   lancedb_connection_free(conn);
+ *   ceph_lancedb_session_free(session);
+ * @endcode
+ */
+LanceDBConnectBuilder* lancedb_connect_builder_session_ptr(LanceDBConnectBuilder* builder, const void* session_ptr);
+
+/**
  * Free a ConnectBuilder
  *
  * @param builder - pointer to LanceDBConnectBuilder returned from lancedb_connect()
